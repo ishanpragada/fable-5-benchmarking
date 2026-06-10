@@ -1,35 +1,47 @@
-# ishan.kr — portfolio landing page
+# ishankr.com — portfolio
 
-A single-page portfolio for **Ishan Buyyanapragada** — CS @ UIUC, systems &
-performance engineering. Dark, instrument-panel editorial design: Anton display
-type, JetBrains Mono microtype, a signal-lime accent, and a pointer-reactive
-Three.js particle terrain.
-
-## Stack
-
-- **No build step** — static `index.html` + vanilla ES modules
-- **GSAP 3.15** (ScrollTrigger, SplitText, ScrambleText) — vendored in `js/vendor/`
-- **Three.js 0.184** — custom point-shader terrain in the hero
-- **Lenis** — smooth scrolling
-- Fonts self-hosted via Fontsource (Anton, Archivo Variable, JetBrains Mono Variable)
+Personal site for **Ishan Buyyanapragada** — software engineer, systems &
+performance. Quiet by design: one column, two typefaces (Geist / Geist Mono),
+one accent color, no build step.
 
 ## Run it
 
 Any static server works:
 
 ```sh
-npx serve .          # or
-python3 -m http.server 8000
+npm run serve        # python3 -m http.server 8000
 ```
 
 Then open `http://localhost:8000`.
 
-## Notable details
+## What's deliberate about it
 
-- Boot-log preloader with a latency-flavored counter
-- Width-fitted poster typography (`data-fit`) at every viewport
-- Work index rows with hover-following preview cards (pure CSS artwork)
-- Scramble-text nav, magnetic buttons, custom cursor (fine pointers only)
-- Velocity-reactive marquee
-- `prefers-reduced-motion` honored throughout; cursor and previews are
-  disabled on touch devices; WebGL failure degrades gracefully
+- **Sliding hover highlight** on the work/writing lists — a single pill chases
+  the hovered row through damped GSAP tweens, so erratic pointer movement still
+  produces calm, continuous motion. If the pill is invisible it appears in
+  place rather than flying in. Keyboard focus drives it exactly like hover.
+- **Margin lattice** (`js/lattice.js`) — the one WebGL element. A dot grid
+  masked to the page margins; the pointer's influence runs through a
+  critically damped spring, and the render loop sleeps (zero CPU) once the
+  spring settles. It never loads on touch devices, narrow viewports, or for
+  users who prefer reduced motion.
+- **On-site writing** (`writing.html`) — posts live here, not on an external
+  service. Arriving via an index link highlights the post date (`:target`).
+- Copy-email button with inline feedback, local Urbana time in the footer,
+  cross-document view-transition fade, `prefers-reduced-motion` honored
+  end to end.
+
+## Stack
+
+- Static HTML + vanilla ES modules, no bundler
+- GSAP 3.15 (load-in stagger + hover pill) — vendored in `js/vendor/`
+- Three.js 0.184 (margin lattice, lazy-imported only where it can be seen)
+- Fonts self-hosted via Fontsource (Geist, Geist Mono)
+
+## Verification
+
+```sh
+npm run verify   # headless-Chrome harness: console errors, overflow,
+                 # content visibility, erratic-hover test, screenshots
+npm run og       # regenerate assets/og.png
+```
