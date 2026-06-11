@@ -18,10 +18,12 @@ const SPACING = 28;      // css px between cells
 const RADIUS = 150;      // pointer influence, css px
 const PUSH = 8;          // max displacement, css px
 const STIFFNESS = 90;    // spring constant; damping is critical
-const TICK_MS = 900;     // one generation
-const FADE_MS = 320;     // generation crossfade
+const TICK_MS = 750;     // one generation
+const FADE_MS = 300;     // generation crossfade
 const SEED_P = 0.12;     // initial soup density
 const MIN_ALIVE = 0.02;  // reseed threshold (fraction of cells)
+const MIN_CHANGE = 0.004; // below this churn the board counts as frozen
+const FROZEN_TICKS = 4;  // consecutive frozen ticks before immigration
 
 const GLIDER = [[0, 1], [1, 2], [2, 0], [2, 1], [2, 2]];
 
@@ -56,7 +58,7 @@ const FRAG = /* glsl */ `
   void main() {
     vec2 c = gl_PointCoord - 0.5;
     if (dot(c, c) > 0.25) discard;
-    gl_FragColor = vec4(uColor, 0.13 + 0.30 * vState + 0.34 * vGlow);
+    gl_FragColor = vec4(uColor, 0.15 + 0.44 * vState + 0.30 * vGlow);
   }
 `;
 
@@ -94,6 +96,16 @@ export function mount(canvas) {
     for (const [dy, dx] of GLIDER) {
       grid[((cy + dy + rows) % rows) * cols + ((cx + dx + cols) % cols)] = 1;
     }
+  }
+
+  // a column inside the visible margins, so immigration is seen, not implied
+  function marginCol() {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const contentLeft = Math.max(0, (window.innerWidth - 64 * rem) / 2);
+    const band = Math.floor(contentLeft / SPACING);
+    if (band < 4) return (Math.random() * cols) | 0;
+    const inBand = (Math.random() * (band - 2)) | 0;
+    return Math.random() < 0.5 ? inBand : cols - 1 - inBand;
   }
 
   function seed() {
@@ -143,8 +155,11 @@ export function mount(canvas) {
     seed();
   }
 
+  let frozenTicks = 0;
+
   function step() {
     let alive = 0;
+    let changed = 0;
     for (let r = 0; r < rows; r++) {
       const up = ((r - 1 + rows) % rows) * cols;
       const mid = r * cols;
@@ -159,15 +174,22 @@ export function mount(canvas) {
         const v = curr[mid + c] ? (n === 2 || n === 3 ? 1 : 0) : n === 3 ? 1 : 0;
         next[mid + c] = v;
         alive += v;
+        changed += v ^ curr[mid + c];
       }
     }
     [curr, next] = [next, curr];
-    if (alive < cells * MIN_ALIVE) {
-      // quiet immigration: a few gliders wander in from random spots
-      for (let g = 0; g < 4; g++) {
-        stampGlider(curr, (Math.random() * cols) | 0, (Math.random() * rows) | 0);
+
+    // Life soups settle into still lifes; a frozen board isn't much of a
+    // simulation. When churn dies down (or population collapses), a few
+    // gliders immigrate through the visible margins.
+    frozenTicks = changed < cells * MIN_CHANGE ? frozenTicks + 1 : 0;
+    if (alive < cells * MIN_ALIVE || frozenTicks >= FROZEN_TICKS) {
+      frozenTicks = 0;
+      for (let g = 0; g < 3; g++) {
+        stampGlider(curr, marginCol(), (Math.random() * rows) | 0);
       }
     }
+
     prevAttr.array.set(currAttr.array);
     currAttr.array.set(curr);
     prevAttr.needsUpdate = currAttr.needsUpdate = true;

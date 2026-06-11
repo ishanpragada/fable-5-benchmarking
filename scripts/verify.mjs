@@ -92,6 +92,28 @@ for (const vp of VIEWPORTS) {
       () => document.querySelector("#simNote").textContent.includes("paused"));
     await page.click("#simNote"); // resume
 
+    // the simulation visibly evolves: the margin changes between frames
+    const clip = { x: 0, y: 120, width: 170, height: 600 };
+    const shotA = await page.screenshot({ clip });
+    await sleep(2600);
+    const shotB = await page.screenshot({ clip });
+    if (Buffer.compare(shotA, shotB) === 0)
+      issues.push("[desktop] FAILED: life simulation appears frozen");
+
+    // clicking "ib" on the home page must not navigate (no white flash)
+    await page.evaluate(() => {
+      window.__stayed = true;
+      window.scrollTo({ top: 300, behavior: "instant" });
+    });
+    await sleep(150);
+    await page.click(".top__mark");
+    let settled = false;
+    for (let i = 0; i < 25 && !settled; i++) {
+      await sleep(120);
+      settled = await page.evaluate(() => window.__stayed === true && window.scrollY < 1);
+    }
+    if (!settled) issues.push("[desktop] FAILED: same-page nav reloaded or did not return to top");
+
     // ---- erratic hover: sweep fast across rows, settle on row 2 ----
     const rows = await page.$$("#work .row");
     const boxes = [];

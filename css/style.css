@@ -36,6 +36,9 @@
 
 /* page navigations crossfade (progressive enhancement) */
 @view-transition { navigation: auto; }
+/* never let UA-white show through mid-transition or on overscroll */
+html { background: var(--bg); }
+::view-transition { background: var(--bg); }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -110,13 +113,18 @@ html.anim [data-in] { visibility: hidden; }
   position: fixed; inset: 0; z-index: 0;
   width: 100%; height: 100%;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.62;
+  /* hold full strength through the gutter, fade only near the content */
   -webkit-mask-image: linear-gradient(to right,
-    black, transparent calc(50% - var(--col) / 2 - 1rem),
-    transparent calc(50% + var(--col) / 2 + 1rem), black);
+    black calc(50% - var(--col) / 2 - 5.5rem),
+    transparent calc(50% - var(--col) / 2 - 1rem),
+    transparent calc(50% + var(--col) / 2 + 1rem),
+    black calc(50% + var(--col) / 2 + 5.5rem));
   mask-image: linear-gradient(to right,
-    black, transparent calc(50% - var(--col) / 2 - 1rem),
-    transparent calc(50% + var(--col) / 2 + 1rem), black);
+    black calc(50% - var(--col) / 2 - 5.5rem),
+    transparent calc(50% - var(--col) / 2 - 1rem),
+    transparent calc(50% + var(--col) / 2 + 1rem),
+    black calc(50% + var(--col) / 2 + 5.5rem));
 }
 .sim-note {
   position: fixed; right: 18px; bottom: 14px; z-index: 5;
@@ -126,7 +134,7 @@ html.anim [data-in] { visibility: hidden; }
   transition: color 0.15s ease, opacity 0.15s ease;
 }
 .sim-note:hover { color: var(--muted); opacity: 1; }
-@media (max-width: 1259px) {
+@media (max-width: 1159px) {
   #lattice, .sim-note { display: none; }
 }
 

@@ -16,6 +16,24 @@ const finePointer =
 document.documentElement.classList.toggle("fine", finePointer);
 
 /* ------------------------------------------------------------
+   nav — links to the page you're already on don't reload it
+   (a same-page navigation just re-runs the view transition for
+   nothing); they scroll to the top instead
+   ------------------------------------------------------------ */
+function initNav() {
+  const norm = (p) => p.replace(/\/index\.html$/, "/");
+  $$(".top__mark, .top__nav a").forEach((a) => {
+    const url = new URL(a.getAttribute("href"), location.href);
+    if (url.origin !== location.origin) return; // mailto / external
+    a.addEventListener("click", (e) => {
+      if (norm(url.pathname) !== norm(location.pathname)) return;
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+    });
+  });
+}
+
+/* ------------------------------------------------------------
    load-in — one quiet cascade, then get out of the way
    ------------------------------------------------------------ */
 function intro() {
@@ -312,7 +330,7 @@ function initClock() {
 function initLattice() {
   const canvas = $("#lattice");
   if (!canvas) return;
-  const wide = matchMedia("(min-width: 1260px)");
+  const wide = matchMedia("(min-width: 1160px)");
   let mounted = false;
 
   const tryMount = () => {
@@ -339,6 +357,7 @@ function initLattice() {
 
 /* ------------------------------------------------------------ */
 function init() {
+  initNav();
   intro();
   const pills = new Map();
   $$("[data-pill]").forEach((list) => {
