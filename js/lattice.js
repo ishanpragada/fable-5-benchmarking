@@ -64,7 +64,14 @@ const FRAG = /* glsl */ `
 
 export function mount(canvas) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: false,
+    // keep the buffer readable so page-transition snapshots capture it
+    // correctly instead of as undefined (sometimes white) content
+    preserveDrawingBuffer: true,
+  });
   renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(dpr);
 

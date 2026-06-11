@@ -113,6 +113,7 @@ html.anim [data-in] { visibility: hidden; }
   position: fixed; inset: 0; z-index: 0;
   width: 100%; height: 100%;
   pointer-events: none;
+  background: var(--bg);
   opacity: 0.62;
   /* hold full strength through the gutter, fade only near the content */
   -webkit-mask-image: linear-gradient(to right,

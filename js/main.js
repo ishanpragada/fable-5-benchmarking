@@ -81,21 +81,19 @@ function attachPill(list) {
     const y = row.offsetTop;
     const h = row.offsetHeight;
     if (reducedMotion || instant) {
-      yTo.tween?.kill();
-      hTo.tween?.kill();
       gsap.set(pill, { y, height: h, opacity: 1 });
+      yTo(y);
+      hTo(h);
       return;
     }
     if (gsap.getProperty(pill, "opacity") < 0.12) {
       // invisible: take position silently, then fade in
-      yTo.tween?.kill();
-      hTo.tween?.kill();
       gsap.set(pill, { y, height: h });
-    } else {
-      yTo(y);
-      hTo(h);
     }
+    yTo(y);
+    hTo(h);
     gsap.to(pill, { opacity: 1, duration: 0.18, ease: "power1.out", overwrite: "auto" });
+
   }
 
   function leave() {
@@ -353,6 +351,12 @@ function initLattice() {
   };
   tryMount();
   wide.addEventListener("change", tryMount);
+  window.addEventListener("pageswap", () => {
+    canvas.style.visibility = "hidden";
+  });
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) canvas.style.visibility = "";
+  });
 }
 
 /* ------------------------------------------------------------ */

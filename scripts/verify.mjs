@@ -129,6 +129,24 @@ for (const vp of VIEWPORTS) {
     await sleep(450);
     await page.screenshot({ path: `${OUT}/desktop-2-hover-settled.png` });
 
+    // leave the list entirely, re-enter, then move to another row — the
+    // pill must follow (regression: a killed quickTo froze it in place)
+    await page.mouse.move(720, 70, { steps: 2 });
+    await sleep(550); // fade-out completes
+    await page.mouse.move(boxes[0].x + 200, boxes[0].y + boxes[0].height / 2, { steps: 2 });
+    await sleep(250);
+    await page.mouse.move(boxes[2].x + 200, boxes[2].y + boxes[2].height / 2, { steps: 3 });
+    await sleep(500);
+    await expect(page, "desktop", "pill follows rows after leave/re-enter", () => {
+      const pill = document.querySelector("#work .pill");
+      const rows = [...document.querySelectorAll("#work .row")];
+      return (
+        Math.abs(window.gsap.getProperty(pill, "y") - rows[2].offsetTop) < 3 &&
+        window.gsap.getProperty(pill, "opacity") > 0.85
+      );
+    });
+
+
     // ---- copy feedback ----
     await page.click("[data-copy]");
     await sleep(200);
@@ -183,6 +201,39 @@ for (const vp of VIEWPORTS) {
   if (vp.name === "mobile") {
     await page.screenshot({ path: `${OUT}/mobile-6-writing-deeplink.png` });
   }
+  if (vp.name === "desktop") {
+    // re-navigating must never flash the margins white (view-transition
+    // snapshots of the WebGL canvas used to capture as white)
+    const countWhite = async (shot) =>
+      page.evaluate(async (b64) => {
+        const img = new Image();
+        img.src = "data:image/png;base64," + b64;
+        await img.decode();
+        const c = document.createElement("canvas");
+        c.width = img.width; c.height = img.height;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const d = ctx.getImageData(0, 0, c.width, c.height).data;
+        let n = 0;
+        for (let p = 0; p < d.length; p += 4) {
+          if (d[p] > 200 && d[p + 1] > 200 && d[p + 2] > 200) n++;
+        }
+        return n;
+      }, shot.toString("base64"));
+    const clip = { x: 0, y: 0, width: 150, height: 880 };
+    const hops = [`${BASE}/${q}`, `${BASE}/writing.html${q}`, `${BASE}/${q}`];
+    for (let i = 0; i < hops.length; i++) {
+      await page.goto(hops[i], { waitUntil: "load", timeout: 30000 });
+      for (let s = 0; s < 2; s++) {
+        const white = await countWhite(await page.screenshot({ clip }));
+        if (white > 800)
+          issues.push(`[desktop] FAILED: margin white flash on re-navigation (${i}.${s}: ${white}px)`);
+        await sleep(90);
+      }
+    }
+  }
+
+
 
   await page.close();
 }
