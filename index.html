@@ -17,7 +17,9 @@
   <link rel="preload" href="fonts/geist-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="css/style.css" />
   <script>
-    /* gate the intro stagger behind JS + motion preference, before first paint */
+    /* js-availability class for CSS, before first paint; the intro stagger
+       additionally requires motion to be allowed */
+    document.documentElement.classList.add("js");
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
       document.documentElement.classList.add("anim");
     }
@@ -28,153 +30,167 @@
   <a class="skip-link" href="#main">Skip to content</a>
 
   <canvas id="lattice" aria-hidden="true"></canvas>
+  <button class="sim-note mono" id="simNote" hidden aria-pressed="false"
+    title="The background runs Conway’s Game of Life. Click to pause.">
+    bg — conway’s game of life · b3/s23 · 1970
+  </button>
 
   <div class="page">
 
     <header class="top" data-in>
-      <a class="top__mark mono" href="index.html" aria-label="Home">ib</a>
+      <a class="top__mark mono" href="index.html">ib</a>
       <nav class="top__nav mono" aria-label="Site">
-        <a href="#work">work</a>
         <a href="writing.html">writing</a>
-        <a href="#contact">contact</a>
+        <a href="mailto:ibuyy@illinois.edu">email</a>
       </nav>
     </header>
 
-    <main id="main">
+    <div class="layout">
 
-      <section class="hero">
-        <h1 class="hero__name" data-in>Ishan Buyyanapragada</h1>
-        <p class="hero__role mono" data-in>software engineer — systems &amp; performance</p>
-        <div class="hero__intro prose" data-in>
+      <aside class="rail">
+        <div data-in>
+          <h1 class="hero__name">Ishan Buyyanapragada</h1>
+          <p class="hero__role mono">software engineer — systems &amp; performance</p>
+        </div>
+        <div class="rail__intro prose" data-in>
           <p>
             I write C++ for the layers where performance is the product —
-            storage engines, matching engines, and the build systems that hold
-            them together. I like knowing what the hardware is actually doing.
+            storage engines, matching engines, and the build systems that
+            hold them together. I like knowing what the hardware is actually
+            doing.
           </p>
           <p>
             This summer I’m at <span class="t">NVIDIA</span>, contributing to
             <a href="https://github.com/rapidsai/rapids-cmake" target="_blank" rel="noopener">rapids-cmake</a>,
-            the open-source build infrastructure behind RAPIDS. In the fall I’m
-            joining <span class="t">AWS</span> to work on
+            the open-source build infrastructure behind RAPIDS. In the fall
+            I’m joining <span class="t">AWS</span> to work on
             <a href="https://aws.amazon.com/rds/aurora/" target="_blank" rel="noopener">Amazon Aurora</a>.
-            I study computer science at the University of Illinois Urbana-Champaign.
+            CS at the University of Illinois Urbana-Champaign.
           </p>
         </div>
-      </section>
-
-      <section class="section" id="work" data-in>
-        <h2 class="label mono">Work</h2>
-        <div class="list" data-pill>
-          <div class="pill" aria-hidden="true"></div>
-
-          <a class="row row--project" href="https://github.com/ishanpragada/the-final-exchange" target="_blank" rel="noopener">
-            <span class="row__main">
-              <span class="row__name mono">the-final-exchange <span class="row__ext" aria-hidden="true">↗</span></span>
-              <span class="row__desc">A C++20 trading exchange — price-time matching engine, binary wire
-              protocol, Asio TCP server, and liquidity bots that speak the same protocol as every other client.</span>
-            </span>
-            <span class="row__meta mono">C++ · 2026</span>
-          </a>
-
-          <a class="row row--project" href="https://github.com/ishanpragada/parquet_plugin" target="_blank" rel="noopener">
-            <span class="row__main">
-              <span class="row__name mono">parquet_plugin <span class="row__ext" aria-hidden="true">↗</span></span>
-              <span class="row__desc">A MariaDB storage engine that lands query results in Apache Iceberg —
-              Arrow record batches, Parquet on S3, atomic commits.</span>
-            </span>
-            <span class="row__meta mono">C++ · 2026</span>
-          </a>
-
-          <a class="row row--project" href="https://github.com/ishanpragada/MRGR" target="_blank" rel="noopener">
-            <span class="row__main">
-              <span class="row__name mono">mrgr <span class="row__ext" aria-hidden="true">↗</span></span>
-              <span class="row__desc">Three-way merge conflict resolution inside VS Code, with AI-proposed
-              patches you accept hunk by hunk.</span>
-            </span>
-            <span class="row__meta mono">TypeScript · 2025</span>
-          </a>
-
-          <a class="row row--project" href="https://github.com/ishanpragada/anti-ai-extension" target="_blank" rel="noopener">
-            <span class="row__main">
-              <span class="row__name mono">thinkfirst <span class="row__ext" aria-hidden="true">↗</span></span>
-              <span class="row__desc">A browser extension that adds deliberate friction before you reach
-              for an LLM.</span>
-            </span>
-            <span class="row__meta mono">JavaScript · 2025</span>
-          </a>
+        <div class="rail__meta mono" data-in>
+          <span>Urbana, IL · <time class="clock">--:--</time></span>
+          <span>© 2026 Ishan Buyyanapragada</span>
         </div>
-      </section>
+      </aside>
 
-      <section class="section" id="experience" data-in>
-        <h2 class="label mono">Experience</h2>
-        <ol class="exp">
-          <li class="exp__row">
-            <span class="exp__when mono"><span class="now-dot" title="current"></span>summer ’26</span>
-            <div class="exp__body">
-              <h3 class="exp__org">NVIDIA <span class="exp__role">— software engineering intern</span></h3>
-              <p class="exp__desc">Build infrastructure for the RAPIDS GPU data-science stack —
-              <a href="https://github.com/rapidsai/rapids-cmake" target="_blank" rel="noopener">rapids-cmake</a>, in the open.</p>
-            </div>
-          </li>
-          <li class="exp__row">
-            <span class="exp__when mono">fall ’26</span>
-            <div class="exp__body">
-              <h3 class="exp__org">AWS <span class="exp__role">— incoming, Amazon Aurora</span></h3>
-              <p class="exp__desc">Database internals on the Aurora team.</p>
-            </div>
-          </li>
-          <li class="exp__row">
-            <span class="exp__when mono">2025</span>
-            <div class="exp__body">
-              <h3 class="exp__org">Tandemn <span class="exp__role">— software engineering intern</span></h3>
-              <p class="exp__desc">Distributed inference across heterogeneous GPUs.</p>
-            </div>
-          </li>
-        </ol>
-      </section>
+      <main id="main">
 
-      <section class="section" id="writing" data-in>
-        <h2 class="label mono">Writing</h2>
-        <div class="list" data-pill>
-          <div class="pill" aria-hidden="true"></div>
+        <section class="section section--first" id="work" data-in>
+          <h2 class="label mono">Work</h2>
+          <div class="list" data-pill>
+            <div class="pill" aria-hidden="true"></div>
 
-          <a class="row row--post" href="writing.html#build-systems">
-            <span class="row__name">build systems are load-bearing</span>
-            <time class="row__meta mono" datetime="2026-06-02">jun 2026</time>
-          </a>
-          <a class="row row--post" href="writing.html#order-book-memory">
-            <span class="row__name">what an order book taught me about memory</span>
-            <time class="row__meta mono" datetime="2026-01-18">jan 2026</time>
-          </a>
-          <a class="row row--post" href="writing.html#on-ai">
-            <span class="row__name">on ai</span>
-            <time class="row__meta mono" datetime="2025-03-19">mar 2025</time>
-          </a>
-        </div>
-      </section>
+            <a class="row row--project" href="https://github.com/ishanpragada/the-final-exchange" target="_blank" rel="noopener">
+              <span class="row__main">
+                <span class="row__name mono">the-final-exchange <span class="row__ext" aria-hidden="true">↗</span></span>
+                <span class="row__desc">A C++20 trading exchange — price-time matching engine, binary
+                wire protocol, Asio TCP server, liquidity bots.</span>
+              </span>
+              <span class="row__meta mono">C++ · 2026</span>
+            </a>
 
-      <section class="section" id="contact" data-in>
-        <h2 class="label mono">Contact</h2>
-        <div class="prose">
-          <p>
-            Email is the fastest way to reach me:
-            <a href="mailto:ibuyy@illinois.edu">ibuyy@illinois.edu</a><button
-              class="copy mono" type="button" data-copy="ibuyy@illinois.edu" aria-label="Copy email address">copy</button>
-          </p>
-          <p class="contact__elsewhere">
-            Elsewhere —
-            <a href="https://github.com/ishanpragada" target="_blank" rel="noopener">GitHub</a>,
-            <a href="https://www.linkedin.com/in/ishanpragada/" target="_blank" rel="noopener">LinkedIn</a>,
-            <a href="https://twitter.com/ishanbuy" target="_blank" rel="noopener">X</a>.
-          </p>
-        </div>
-      </section>
+            <a class="row row--project" href="https://github.com/ishanpragada/parquet_plugin" target="_blank" rel="noopener">
+              <span class="row__main">
+                <span class="row__name mono">parquet_plugin <span class="row__ext" aria-hidden="true">↗</span></span>
+                <span class="row__desc">A MariaDB storage engine that lands query results in Apache
+                Iceberg — Arrow batches, Parquet on S3, atomic commits.</span>
+              </span>
+              <span class="row__meta mono">C++ · 2026</span>
+            </a>
 
-    </main>
+            <a class="row row--project" href="https://github.com/ishanpragada/MRGR" target="_blank" rel="noopener">
+              <span class="row__main">
+                <span class="row__name mono">mrgr <span class="row__ext" aria-hidden="true">↗</span></span>
+                <span class="row__desc">Three-way merge conflict resolution inside VS Code, with
+                AI-proposed patches you accept hunk by hunk.</span>
+              </span>
+              <span class="row__meta mono">TypeScript · 2025</span>
+            </a>
+
+            <a class="row row--project" href="https://github.com/ishanpragada/anti-ai-extension" target="_blank" rel="noopener">
+              <span class="row__main">
+                <span class="row__name mono">thinkfirst <span class="row__ext" aria-hidden="true">↗</span></span>
+                <span class="row__desc">A browser extension that adds deliberate friction before you
+                reach for an LLM.</span>
+              </span>
+              <span class="row__meta mono">JavaScript · 2025</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="section" id="experience" data-in>
+          <h2 class="label mono">Experience</h2>
+          <ol class="exp">
+            <li class="exp__row">
+              <span class="exp__when mono"><span class="now-dot" title="current"></span>summer ’26</span>
+              <div class="exp__body">
+                <h3 class="exp__org">NVIDIA <span class="exp__role">— software engineering intern</span></h3>
+                <p class="exp__desc">Build infrastructure for the RAPIDS GPU data-science stack —
+                <a href="https://github.com/rapidsai/rapids-cmake" target="_blank" rel="noopener">rapids-cmake</a>, in the open.</p>
+              </div>
+            </li>
+            <li class="exp__row">
+              <span class="exp__when mono">fall ’26</span>
+              <div class="exp__body">
+                <h3 class="exp__org">AWS <span class="exp__role">— incoming, Amazon Aurora</span></h3>
+                <p class="exp__desc">Database internals on the Aurora team.</p>
+              </div>
+            </li>
+            <li class="exp__row">
+              <span class="exp__when mono">2025</span>
+              <div class="exp__body">
+                <h3 class="exp__org">Tandemn <span class="exp__role">— software engineering intern</span></h3>
+                <p class="exp__desc">Distributed inference across heterogeneous GPUs.</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="section" id="writing" data-in>
+          <h2 class="label mono">Writing</h2>
+          <div class="list" data-pill>
+            <div class="pill" aria-hidden="true"></div>
+
+            <a class="row row--post" href="writing.html#build-systems">
+              <span class="row__name">build systems are load-bearing</span>
+              <time class="row__meta mono" datetime="2026-06-02">jun 2026</time>
+            </a>
+            <a class="row row--post" href="writing.html#order-book-memory">
+              <span class="row__name">what an order book taught me about memory</span>
+              <time class="row__meta mono" datetime="2026-01-18">jan 2026</time>
+            </a>
+            <a class="row row--post" href="writing.html#on-ai">
+              <span class="row__name">on ai</span>
+              <time class="row__meta mono" datetime="2025-03-19">mar 2025</time>
+            </a>
+          </div>
+        </section>
+
+        <section class="section" id="contact" data-in>
+          <h2 class="label mono">Contact</h2>
+          <div class="prose">
+            <p>
+              Email is the fastest way to reach me:
+              <a href="mailto:ibuyy@illinois.edu">ibuyy@illinois.edu</a><button
+                class="copy mono" type="button" data-copy="ibuyy@illinois.edu" aria-label="Copy email address">copy</button>
+            </p>
+            <p class="contact__elsewhere">
+              Elsewhere —
+              <a href="https://github.com/ishanpragada" target="_blank" rel="noopener">GitHub</a>,
+              <a href="https://www.linkedin.com/in/ishanpragada/" target="_blank" rel="noopener">LinkedIn</a>,
+              <a href="https://twitter.com/ishanbuy" target="_blank" rel="noopener">X</a>.
+            </p>
+          </div>
+        </section>
+
+      </main>
+
+    </div>
 
     <footer class="foot" data-in>
       <span class="mono">© 2026 Ishan Buyyanapragada</span>
-      <span class="mono">Urbana, IL · <time id="clock">--:--</time></span>
+      <span class="mono">Urbana, IL · <time class="clock">--:--</time></span>
     </footer>
 
   </div>

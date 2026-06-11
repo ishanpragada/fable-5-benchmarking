@@ -15,6 +15,7 @@
   <link rel="preload" href="fonts/geist-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="css/style.css" />
   <script>
+    document.documentElement.classList.add("js");
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
       document.documentElement.classList.add("anim");
     }
@@ -25,118 +26,161 @@
   <a class="skip-link" href="#main">Skip to content</a>
 
   <canvas id="lattice" aria-hidden="true"></canvas>
+  <button class="sim-note mono" id="simNote" hidden aria-pressed="false"
+    title="The background runs Conway’s Game of Life. Click to pause.">
+    bg — conway’s game of life · b3/s23 · 1970
+  </button>
 
   <div class="page">
 
     <header class="top" data-in>
-      <a class="top__mark mono" href="index.html" aria-label="Home">ib</a>
+      <a class="top__mark mono" href="index.html">ib</a>
       <nav class="top__nav mono" aria-label="Site">
-        <a href="index.html#work">work</a>
         <a href="writing.html" aria-current="page">writing</a>
-        <a href="index.html#contact">contact</a>
+        <a href="mailto:ibuyy@illinois.edu">email</a>
       </nav>
     </header>
 
-    <main id="main">
+    <div class="layout">
 
-      <section class="hero hero--small">
-        <h1 class="hero__name" data-in>Writing</h1>
-        <p class="hero__role mono" data-in>notes on systems, performance, and building software</p>
-      </section>
-
-      <article class="post" id="build-systems" data-in>
-        <header class="post__head">
-          <h2 class="post__title">build systems are load-bearing</h2>
-          <time class="post__date mono" datetime="2026-06-02">jun 2026</time>
-        </header>
-        <div class="prose">
-          <p>
-            I spent my first weeks at NVIDIA inside rapids-cmake, the layer that
-            holds the RAPIDS stack together. It’s the kind of code most people
-            only notice when it breaks, which is exactly what makes it
-            interesting: every project downstream inherits its decisions about
-            compilers, architectures, and dependency resolution, and nobody
-            sends a thank-you note when all of that just works.
-          </p>
-          <p>
-            The thing I underestimated is that a build system is a distributed
-            systems problem wearing a trench coat. Caching, invalidation,
-            hermeticity, fan-out across targets — the vocabulary is the same.
-            A flaky build is a consistency bug. A slow one is a latency bug.
-            The fact that the artifact is a compiled binary instead of a query
-            result is almost incidental.
-          </p>
-          <p>
-            My takeaway so far: infrastructure earns trust by being boring.
-            Code that supports other people’s work should be the least
-            surprising thing in their day. There’s real craft in that kind of
-            boring, and I’d like to get better at it.
-          </p>
+      <aside class="rail">
+        <div data-in>
+          <h1 class="hero__name">Writing</h1>
+          <p class="hero__role mono">notes on systems &amp; software</p>
         </div>
-      </article>
 
-      <article class="post" id="order-book-memory" data-in>
-        <header class="post__head">
-          <h2 class="post__title">what an order book taught me about memory</h2>
-          <time class="post__date mono" datetime="2026-01-18">jan 2026</time>
-        </header>
-        <div class="prose">
-          <p>
-            The first version of my matching engine kept its book in a
-            <code>std::map</code> per side. It was correct, it was obvious, and
-            the profiler showed it spending most of its life chasing pointers.
-            Every order touched nodes scattered across the heap, and the cache
-            hit rate told the story better than any benchmark summary could.
-          </p>
-          <p>
-            The rewrite stored price levels in flat arrays indexed by tick, with
-            intrusive lists for orders at each level. Same algorithm on paper —
-            price-time priority either way — but the machine saw something
-            completely different: predictable strides, prefetchable layouts, and
-            allocations moved out of the hot path entirely.
-          </p>
-          <p>
-            The lesson wasn’t “maps are slow.” It’s that big-O reasoning stops
-            being the dominant term long before most of us expect it to. Past
-            that point, performance is a data-layout problem, and the only
-            honest way to reason about it is to measure. The profiler is the
-            code review the hardware gives you.
-          </p>
+        <nav class="wtabs list" role="tablist" aria-label="Posts" aria-orientation="vertical" data-pill data-in>
+          <div class="pill" aria-hidden="true"></div>
+
+          <button class="row row--post wtab" role="tab" id="tab-build-systems"
+            aria-controls="build-systems" aria-selected="true" type="button">
+            <span class="row__name">build systems are load-bearing</span>
+            <time class="row__meta mono" datetime="2026-06-02">jun 2026</time>
+          </button>
+
+          <button class="row row--post wtab" role="tab" id="tab-order-book-memory"
+            aria-controls="order-book-memory" aria-selected="false" tabindex="-1" type="button">
+            <span class="row__name">what an order book taught me about memory</span>
+            <time class="row__meta mono" datetime="2026-01-18">jan 2026</time>
+          </button>
+
+          <button class="row row--post wtab" role="tab" id="tab-on-ai"
+            aria-controls="on-ai" aria-selected="false" tabindex="-1" type="button">
+            <span class="row__name">on ai</span>
+            <time class="row__meta mono" datetime="2025-03-19">mar 2025</time>
+          </button>
+        </nav>
+
+        <p class="rail__hint mono" data-in aria-hidden="true">← → to flip through</p>
+
+        <div class="rail__meta mono" data-in>
+          <span>Urbana, IL · <time class="clock">--:--</time></span>
+          <span>© 2026 Ishan Buyyanapragada</span>
         </div>
-      </article>
+      </aside>
 
-      <article class="post" id="on-ai" data-in>
-        <header class="post__head">
-          <h2 class="post__title">on ai</h2>
-          <time class="post__date mono" datetime="2025-03-19">mar 2025</time>
-        </header>
-        <div class="prose">
-          <p>
-            Written over spring break of freshman year, mostly to figure out
-            what I actually believed.
-          </p>
-          <p>
-            Everyone in my CS classes uses AI. The interesting question isn’t
-            whether that’s allowed — it’s what it does to the muscle you came
-            here to build. When a model autocompletes the hard part, you don’t
-            just skip the typing; you skip the part where the problem pushes
-            back. That resistance is the entire workout.
-          </p>
-          <p>
-            So my rule for now: think first, prompt second. I write the
-            approach down — actual sentences, sometimes on paper — before I
-            ask a model anything. If I can’t explain the shape of the solution,
-            I’m not ready to delegate the details. The model is a power tool,
-            and power tools are for people who can already hold the material.
-          </p>
+      <main id="main" data-in>
+        <div class="reader" id="reader">
+
+          <article class="wpanel" role="tabpanel" id="build-systems" aria-labelledby="tab-build-systems">
+            <header class="wpanel__head">
+              <h2 class="wpanel__title">build systems are load-bearing</h2>
+              <time class="wpanel__date mono" datetime="2026-06-02">jun 2026</time>
+            </header>
+            <div class="prose">
+              <p>
+                I spent my first weeks at NVIDIA inside rapids-cmake, the layer
+                that holds the RAPIDS stack together. It’s the kind of code most
+                people only notice when it breaks, which is exactly what makes
+                it interesting: every project downstream inherits its decisions
+                about compilers, architectures, and dependency resolution, and
+                nobody sends a thank-you note when all of that just works.
+              </p>
+              <p>
+                The thing I underestimated is that a build system is a
+                distributed systems problem wearing a trench coat. Caching,
+                invalidation, hermeticity, fan-out across targets — the
+                vocabulary is the same. A flaky build is a consistency bug. A
+                slow one is a latency bug. The fact that the artifact is a
+                compiled binary instead of a query result is almost incidental.
+              </p>
+              <p>
+                My takeaway so far: infrastructure earns trust by being boring.
+                Code that supports other people’s work should be the least
+                surprising thing in their day. There’s real craft in that kind
+                of boring, and I’d like to get better at it.
+              </p>
+            </div>
+          </article>
+
+          <article class="wpanel" role="tabpanel" id="order-book-memory" aria-labelledby="tab-order-book-memory" hidden>
+            <header class="wpanel__head">
+              <h2 class="wpanel__title">what an order book taught me about memory</h2>
+              <time class="wpanel__date mono" datetime="2026-01-18">jan 2026</time>
+            </header>
+            <div class="prose">
+              <p>
+                The first version of my matching engine kept its book in a
+                <code>std::map</code> per side. It was correct, it was obvious,
+                and the profiler showed it spending most of its life chasing
+                pointers. Every order touched nodes scattered across the heap,
+                and the cache hit rate told the story better than any benchmark
+                summary could.
+              </p>
+              <p>
+                The rewrite stored price levels in flat arrays indexed by tick,
+                with intrusive lists for orders at each level. Same algorithm on
+                paper — price-time priority either way — but the machine saw
+                something completely different: predictable strides,
+                prefetchable layouts, and allocations moved out of the hot path
+                entirely.
+              </p>
+              <p>
+                The lesson wasn’t “maps are slow.” It’s that big-O reasoning
+                stops being the dominant term long before most of us expect it
+                to. Past that point, performance is a data-layout problem, and
+                the only honest way to reason about it is to measure. The
+                profiler is the code review the hardware gives you.
+              </p>
+            </div>
+          </article>
+
+          <article class="wpanel" role="tabpanel" id="on-ai" aria-labelledby="tab-on-ai" hidden>
+            <header class="wpanel__head">
+              <h2 class="wpanel__title">on ai</h2>
+              <time class="wpanel__date mono" datetime="2025-03-19">mar 2025</time>
+            </header>
+            <div class="prose">
+              <p>
+                Written over spring break of freshman year, mostly to figure out
+                what I actually believed.
+              </p>
+              <p>
+                Everyone in my CS classes uses AI. The interesting question
+                isn’t whether that’s allowed — it’s what it does to the muscle
+                you came here to build. When a model autocompletes the hard
+                part, you don’t just skip the typing; you skip the part where
+                the problem pushes back. That resistance is the entire workout.
+              </p>
+              <p>
+                So my rule for now: think first, prompt second. I write the
+                approach down — actual sentences, sometimes on paper — before I
+                ask a model anything. If I can’t explain the shape of the
+                solution, I’m not ready to delegate the details. The model is a
+                power tool, and power tools are for people who can already hold
+                the material.
+              </p>
+            </div>
+          </article>
+
         </div>
-      </article>
+      </main>
 
-    </main>
+    </div>
 
     <footer class="foot" data-in>
       <span class="mono">© 2026 Ishan Buyyanapragada</span>
-      <span class="mono">Urbana, IL · <time id="clock">--:--</time></span>
+      <span class="mono">Urbana, IL · <time class="clock">--:--</time></span>
     </footer>
 
   </div>

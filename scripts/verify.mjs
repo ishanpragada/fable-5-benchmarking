@@ -1,6 +1,7 @@
 /* Verification harness: drives headless Chrome over CDP, captures console
    errors, request failures, layout overflow, and screenshots across
-   viewports — including an erratic-hover test for the sliding highlight. */
+   viewports — plus behavioral checks: erratic hover, writing tabs (click,
+   keyboard, hash deep-link), the sim note, and nav consistency. */
 import puppeteer from "puppeteer";
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
@@ -38,12 +39,25 @@ function watch(page, tag) {
   );
 }
 
-async function checkOverflow(page, tag) {
-  const ok = await page.evaluate(
-    () => document.documentElement.scrollWidth <= window.innerWidth
-  );
-  if (!ok) issues.push(`[${tag}] horizontal overflow detected`);
+async function expect(page, tag, name, fn) {
+  const ok = await page.evaluate(fn);
+  if (!ok) issues.push(`[${tag}] FAILED: ${name}`);
 }
+
+const checkOverflow = (page, tag) =>
+  expect(page, tag, "no horizontal overflow",
+    () => document.documentElement.scrollWidth <= window.innerWidth);
+
+const checkContent = (page, tag) =>
+  expect(page, tag, "hero visible after intro", () => {
+    const el = document.querySelector(".hero__name");
+    const cs = getComputedStyle(el);
+    return cs.visibility === "visible" && parseFloat(cs.opacity) > 0.98;
+  });
+
+const checkNav = (page, tag) =>
+  expect(page, tag, "nav has no in-page anchors",
+    () => [...document.querySelectorAll(".top__nav a")].every((a) => !a.getAttribute("href").includes("#")));
 
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900, mobile: false },
@@ -58,72 +72,100 @@ for (const vp of VIEWPORTS) {
     isMobile: vp.mobile, hasTouch: vp.mobile, deviceScaleFactor: 1,
   });
   watch(page, vp.name);
-
   const q = vp.mobile ? "" : "?forcefine=1";
 
   // ---- home ----
   await page.goto(`${BASE}/${q}`, { waitUntil: "networkidle0", timeout: 30000 });
   await sleep(1400); // intro cascade
-  const contentOk = await page.evaluate(() => {
-    const el = document.querySelector(".hero__name");
-    const cs = getComputedStyle(el);
-    return cs.visibility === "visible" && parseFloat(cs.opacity) > 0.98;
-  });
-  if (!contentOk) issues.push(`[${vp.name}] hero content not visible after intro`);
-  await page.screenshot({ path: `${OUT}/${vp.name}-1-home.png` });
+  await checkContent(page, `${vp.name} home`);
   await checkOverflow(page, `${vp.name} home`);
-
-  await page.evaluate(() => document.querySelector("#work").scrollIntoView({ block: "start" }));
-  await sleep(400);
-  await page.screenshot({ path: `${OUT}/${vp.name}-2-work.png` });
-
-  await page.evaluate(() => document.querySelector("#contact").scrollIntoView({ block: "center" }));
-  await sleep(400);
-  await page.screenshot({ path: `${OUT}/${vp.name}-3-contact.png` });
+  await checkNav(page, `${vp.name} home`);
+  await page.screenshot({ path: `${OUT}/${vp.name}-1-home.png` });
 
   if (vp.name === "desktop") {
-    // ---- erratic hover: sweep the pointer across every row fast,
-    // settle on row 2; the pill should sit calmly on row 2 ----
-    await page.evaluate(() => document.querySelector("#work").scrollIntoView({ block: "center" }));
-    await sleep(300);
+    // sim note present and toggles
+    await expect(page, "desktop", "sim note visible",
+      () => !document.querySelector("#simNote")?.hidden);
+    await page.click("#simNote");
+    await sleep(150);
+    await expect(page, "desktop", "sim note shows paused",
+      () => document.querySelector("#simNote").textContent.includes("paused"));
+    await page.click("#simNote"); // resume
+
+    // ---- erratic hover: sweep fast across rows, settle on row 2 ----
     const rows = await page.$$("#work .row");
     const boxes = [];
     for (const r of rows) boxes.push(await r.boundingBox());
     for (let pass = 0; pass < 3; pass++) {
       for (const b of pass % 2 ? boxes : [...boxes].reverse()) {
-        await page.mouse.move(b.x + 200 + pass * 60, b.y + b.height / 2, { steps: 1 });
+        await page.mouse.move(b.x + 180 + pass * 60, b.y + b.height / 2, { steps: 1 });
         await sleep(16);
       }
     }
     const b2 = boxes[1];
-    await page.mouse.move(b2.x + 260, b2.y + b2.height / 2, { steps: 2 });
+    await page.mouse.move(b2.x + 240, b2.y + b2.height / 2, { steps: 2 });
     await sleep(450);
-    await page.screenshot({ path: `${OUT}/${vp.name}-4-hover-settled.png` });
+    await page.screenshot({ path: `${OUT}/desktop-2-hover-settled.png` });
 
-    // ---- copy button feedback ----
-    await page.evaluate(() => document.querySelector("#contact").scrollIntoView({ block: "center" }));
-    await sleep(250);
+    // ---- copy feedback ----
     await page.click("[data-copy]");
     await sleep(200);
-    await page.screenshot({ path: `${OUT}/${vp.name}-5-copied.png` });
+    await page.screenshot({ path: `${OUT}/desktop-3-copied.png` });
+  } else {
+    await page.evaluate(() => document.querySelector("#contact")?.scrollIntoView({ block: "center" }));
+    await sleep(400);
+    await page.screenshot({ path: `${OUT}/${vp.name}-2-contact.png` });
   }
 
-  // ---- writing page (via anchor, checks :target affordance) ----
-  await page.goto(`${BASE}/writing.html${q ? q + "&" : "?"}x=1#order-book-memory`, {
-    waitUntil: "networkidle0", timeout: 30000,
-  });
+  // ---- writing: default tab ----
+  await page.goto(`${BASE}/writing.html${q}`, { waitUntil: "networkidle0", timeout: 30000 });
   await sleep(1400);
-  await page.screenshot({ path: `${OUT}/${vp.name}-6-writing-target.png` });
   await checkOverflow(page, `${vp.name} writing`);
+  await expect(page, `${vp.name} writing`, "first tab selected by default", () => {
+    const tabs = [...document.querySelectorAll(".wtab")];
+    const panels = [...document.querySelectorAll(".wpanel")];
+    return tabs[0].getAttribute("aria-selected") === "true" &&
+      !panels[0].hidden && panels[1].hidden && panels[2].hidden;
+  });
+  await page.screenshot({ path: `${OUT}/${vp.name}-4-writing.png` });
 
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await sleep(500);
-  await page.screenshot({ path: `${OUT}/${vp.name}-7-writing-top.png` });
+  // ---- writing: click second tab ----
+  await page.click("#tab-order-book-memory");
+  await sleep(600);
+  await expect(page, `${vp.name} writing`, "second tab selected after click", () => {
+    const panels = [...document.querySelectorAll(".wpanel")];
+    return document.querySelector("#tab-order-book-memory").getAttribute("aria-selected") === "true" &&
+      panels[0].hidden && !panels[1].hidden &&
+      location.hash === "#order-book-memory";
+  });
+  await page.screenshot({ path: `${OUT}/${vp.name}-5-writing-tab2.png` });
+
+  if (vp.name === "desktop") {
+    // ---- keyboard: global ArrowRight cycles to third ----
+    await page.keyboard.press("ArrowRight");
+    await sleep(600);
+    await expect(page, "desktop writing", "ArrowRight moves to third post", () => {
+      const panels = [...document.querySelectorAll(".wpanel")];
+      return !panels[2].hidden && location.hash === "#on-ai";
+    });
+  }
+
+  // ---- writing: hash deep link selects the right tab ----
+  await page.goto(`${BASE}/writing.html${q}#on-ai`, { waitUntil: "networkidle0", timeout: 30000 });
+  await sleep(1200);
+  await expect(page, `${vp.name} writing`, "hash deep-link opens its tab", () => {
+    const panels = [...document.querySelectorAll(".wpanel")];
+    return document.querySelector("#tab-on-ai").getAttribute("aria-selected") === "true" &&
+      !panels[2].hidden && panels[0].hidden;
+  });
+  if (vp.name === "mobile") {
+    await page.screenshot({ path: `${OUT}/mobile-6-writing-deeplink.png` });
+  }
 
   await page.close();
 }
 
-// ---- reduced motion: everything visible, nothing animated ----
+// ---- reduced motion: everything visible, sim not loaded ----
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
@@ -131,12 +173,9 @@ for (const vp of VIEWPORTS) {
   watch(page, "reduced-motion");
   await page.goto(`${BASE}/`, { waitUntil: "networkidle0", timeout: 30000 });
   await sleep(600);
-  const visible = await page.evaluate(() =>
-    [...document.querySelectorAll("[data-in]")].every(
-      (el) => getComputedStyle(el).visibility === "visible"
-    )
-  );
-  if (!visible) issues.push("[reduced-motion] data-in content hidden");
+  await checkContent(page, "reduced-motion");
+  await expect(page, "reduced-motion", "lattice not loaded",
+    () => !performance.getEntriesByType("resource").some((e) => e.name.includes("lattice.js")));
   await page.screenshot({ path: `${OUT}/rm-home.png` });
   await page.close();
 }
@@ -149,6 +188,6 @@ if (issues.length) {
   for (const i of issues) console.log("  " + i);
   process.exitCode = 1;
 } else {
-  console.log("OK: no console errors, page errors, failed requests, or overflow.");
+  console.log("OK: all checks passed.");
 }
 console.log(`Screenshots in ${OUT}/`);

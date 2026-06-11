@@ -1,8 +1,8 @@
 /* ============================================================
    main.js — ishankr.com
-   Small on purpose. GSAP handles two things: the load-in
-   stagger and the sliding hover highlight. Everything else is
-   a few lines of vanilla.
+   Small on purpose. GSAP handles the load-in stagger, the
+   sliding hover highlight, and the writing crossfade. The rest
+   is a few lines of vanilla.
    ============================================================ */
 
 const { gsap } = window;
@@ -13,6 +13,7 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer =
   matchMedia("(pointer: fine)").matches ||
   new URLSearchParams(location.search).has("forcefine"); // test hook
+document.documentElement.classList.toggle("fine", finePointer);
 
 /* ------------------------------------------------------------
    load-in — one quiet cascade, then get out of the way
@@ -47,27 +48,31 @@ function intro() {
    - if it's mid-fade-out and the pointer returns, the fade is
      cancelled and it keeps sliding — erratic input, calm output
    - keyboard focus drives it exactly like hover
+   - a list may declare a "rest" row (the selected tab); on
+     leave, the pill glides home instead of fading out
    ------------------------------------------------------------ */
 function attachPill(list) {
   const pill = $(".pill", list);
-  if (!pill) return;
-  const rows = $$(".row", list);
+  if (!pill) return null;
 
   const yTo = gsap.quickTo(pill, "y", { duration: 0.3, ease: "expo.out" });
   const hTo = gsap.quickTo(pill, "height", { duration: 0.3, ease: "expo.out" });
+  let rest = null;
 
-  function show(row) {
+  function moveTo(row, instant) {
     const y = row.offsetTop;
     const h = row.offsetHeight;
-    if (reducedMotion) {
+    if (reducedMotion || instant) {
+      yTo.tween?.kill();
+      hTo.tween?.kill();
       gsap.set(pill, { y, height: h, opacity: 1 });
       return;
     }
     if (gsap.getProperty(pill, "opacity") < 0.12) {
       // invisible: take position silently, then fade in
-      gsap.set(pill, { y, height: h });
       yTo.tween?.kill();
       hTo.tween?.kill();
+      gsap.set(pill, { y, height: h });
     } else {
       yTo(y);
       hTo(h);
@@ -75,7 +80,11 @@ function attachPill(list) {
     gsap.to(pill, { opacity: 1, duration: 0.18, ease: "power1.out", overwrite: "auto" });
   }
 
-  function hide() {
+  function leave() {
+    if (rest && rest.offsetParent) {
+      moveTo(rest);
+      return;
+    }
     if (reducedMotion) {
       gsap.set(pill, { opacity: 0 });
       return;
@@ -83,14 +92,162 @@ function attachPill(list) {
     gsap.to(pill, { opacity: 0, duration: 0.25, ease: "power1.out", overwrite: "auto" });
   }
 
-  rows.forEach((row) => {
-    row.addEventListener("pointerenter", () => show(row));
-    row.addEventListener("focusin", () => show(row));
+  $$(".row", list).forEach((row) => {
+    row.addEventListener("pointerenter", () => moveTo(row));
+    row.addEventListener("focusin", () => moveTo(row));
     row.addEventListener("focusout", (e) => {
-      if (!list.contains(e.relatedTarget)) hide();
+      if (!list.contains(e.relatedTarget)) leave();
     });
   });
-  list.addEventListener("pointerleave", hide);
+  list.addEventListener("pointerleave", leave);
+
+  return {
+    setRest(row, instant) {
+      rest = row;
+      if (row && row.offsetParent && !list.matches(":hover")) moveTo(row, instant);
+    },
+  };
+}
+
+/* ------------------------------------------------------------
+   writing reader — tabs, crossfade, hash, keys, swipe
+   ------------------------------------------------------------ */
+function initReader(pills) {
+  const reader = $("#reader");
+  if (!reader) return;
+  const tabs = $$(".wtab");
+  const panels = tabs.map((t) => document.getElementById(t.getAttribute("aria-controls")));
+  const pillApi = pills.get($(".wtabs"));
+  let idx = 0;
+
+  function measure(panel) {
+    const wasHidden = panel.hidden;
+    if (wasHidden) {
+      panel.style.visibility = "hidden";
+      panel.hidden = false;
+    }
+    const h = panel.offsetHeight;
+    if (wasHidden) {
+      panel.hidden = true;
+      panel.style.visibility = "";
+    }
+    return h;
+  }
+
+  function apply(next, animate, writeHash = true) {
+    const prev = idx;
+    idx = next;
+    tabs.forEach((t, k) => {
+      t.setAttribute("aria-selected", k === next ? "true" : "false");
+      t.tabIndex = k === next ? 0 : -1;
+    });
+    pillApi?.setRest(tabs[next], !animate);
+    // never write the hash during page load: the browser's deferred
+    // scroll-to-fragment step would pick it up and scroll the page
+    if (writeHash) history.replaceState(null, "", "#" + panels[next].id);
+
+    const inc = panels[next];
+    const h = measure(inc);
+
+    gsap.killTweensOf([reader, ...panels]);
+    if (!animate || reducedMotion || prev === next) {
+      panels.forEach((p, k) => {
+        p.hidden = k !== next;
+        gsap.set(p, { clearProps: "all" });
+      });
+      reader.style.height = h + "px";
+      return;
+    }
+
+    panels.forEach((p, k) => {
+      if (k !== next && k !== prev) p.hidden = true;
+    });
+    const out = panels[prev];
+    inc.hidden = false;
+    gsap.set(inc, { autoAlpha: 0, y: 6 });
+    gsap.to(out, {
+      autoAlpha: 0,
+      y: -4,
+      duration: 0.14,
+      ease: "power1.in",
+      onComplete() {
+        out.hidden = true;
+        gsap.set(out, { clearProps: "all" });
+      },
+    });
+    gsap.to(reader, { height: h, duration: 0.26, ease: "power2.out" });
+    gsap.to(inc, {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.22,
+      delay: 0.1,
+      ease: "power2.out",
+      onComplete: () => gsap.set(inc, { clearProps: "opacity,visibility,transform" }),
+    });
+  }
+
+  const fromHash = () =>
+    Math.max(0, panels.findIndex((p) => "#" + p.id === decodeURIComponent(location.hash)));
+
+  // wiring
+  tabs.forEach((tab, k) => tab.addEventListener("click", () => apply(k, true)));
+
+  $(".wtabs").addEventListener("keydown", (e) => {
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    let to = null;
+    if (step) to = (idx + step + tabs.length) % tabs.length;
+    if (e.key === "Home") to = 0;
+    if (e.key === "End") to = tabs.length - 1;
+    if (to === null) return;
+    e.preventDefault();
+    apply(to, true);
+    tabs[to].focus();
+  });
+
+  // global arrows for readers who never touch the tabs
+  document.addEventListener("keydown", (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+    if ($(".wtabs").contains(document.activeElement)) return; // tablist handles its own
+    if (e.key === "ArrowRight") apply((idx + 1) % tabs.length, true);
+    if (e.key === "ArrowLeft") apply((idx - 1 + tabs.length) % tabs.length, true);
+  });
+
+  // swipe between posts on touch
+  let touch = null;
+  reader.addEventListener("touchstart", (e) => {
+    touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+  reader.addEventListener("touchend", (e) => {
+    if (!touch) return;
+    const dx = e.changedTouches[0].clientX - touch.x;
+    const dy = e.changedTouches[0].clientY - touch.y;
+    touch = null;
+    if (Math.abs(dx) < 56 || Math.abs(dy) > 64) return;
+    apply((idx + (dx < 0 ? 1 : -1) + tabs.length) % tabs.length, true);
+  }, { passive: true });
+
+  window.addEventListener("hashchange", () => {
+    const k = fromHash();
+    if (k !== idx) apply(k, true);
+  });
+
+  let resizeT = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => {
+      reader.style.height = measure(panels[idx]) + "px";
+      pillApi?.setRest(tabs[idx], true);
+    }, 120);
+  });
+
+  // initial state: honor the hash, settle height once fonts are real
+  apply(fromHash(), false, false);
+  document.fonts.ready.then(() => {
+    reader.style.height = measure(panels[idx]) + "px";
+    pillApi?.setRest(tabs[idx], true);
+  });
 }
 
 /* ------------------------------------------------------------
@@ -126,8 +283,8 @@ function initCopy() {
    local time, Urbana
    ------------------------------------------------------------ */
 function initClock() {
-  const el = $("#clock");
-  if (!el) return;
+  const els = $$(".clock");
+  if (!els.length) return;
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
     hour: "2-digit",
@@ -136,28 +293,44 @@ function initClock() {
     timeZoneName: "short",
   });
   const tick = () => {
-    el.textContent = fmt.format(new Date());
-    el.dateTime = new Date().toISOString();
+    const now = new Date();
+    const s = fmt.format(now);
+    els.forEach((el) => {
+      el.textContent = s;
+      el.dateTime = now.toISOString();
+    });
   };
   tick();
   setInterval(tick, 10_000);
 }
 
 /* ------------------------------------------------------------
-   lattice — only where it can be seen and felt:
-   wide viewport, fine pointer, motion allowed, WebGL present
+   background simulation — only where it can be seen and felt:
+   wide viewport, fine pointer, motion allowed, WebGL present.
+   The bottom-right note cites the process and pauses it.
    ------------------------------------------------------------ */
 function initLattice() {
   const canvas = $("#lattice");
   if (!canvas) return;
-  const wide = matchMedia("(min-width: 1101px)");
+  const wide = matchMedia("(min-width: 1260px)");
   let mounted = false;
 
   const tryMount = () => {
     if (mounted || !wide.matches || !finePointer || reducedMotion) return;
     mounted = true;
     import("./lattice.js")
-      .then((m) => m.mount(canvas))
+      .then((m) => {
+        const sim = m.mount(canvas);
+        const note = $("#simNote");
+        if (!note) return;
+        const base = note.textContent.trim();
+        note.hidden = false;
+        note.addEventListener("click", () => {
+          const running = sim.toggle();
+          note.setAttribute("aria-pressed", String(!running));
+          note.textContent = running ? base : base + " · paused";
+        });
+      })
       .catch(() => canvas.remove());
   };
   tryMount();
@@ -167,7 +340,12 @@ function initLattice() {
 /* ------------------------------------------------------------ */
 function init() {
   intro();
-  $$("[data-pill]").forEach(attachPill);
+  const pills = new Map();
+  $$("[data-pill]").forEach((list) => {
+    const api = attachPill(list);
+    if (api) pills.set(list, api);
+  });
+  initReader(pills);
   initCopy();
   initClock();
   initLattice();
