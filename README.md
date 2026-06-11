@@ -34,7 +34,7 @@ Then open `http://localhost:8000`.
   instead of popping, the pointer's influence runs through a critically
   damped spring, frames render only when something changed, and none of it
   loads on touch devices, narrow viewports, or for reduced-motion users.
-- Copy-email button with inline feedback, local Urbana time pinned
+- Copy-email button with inline feedback, local time pinned
   bottom-left, cross-document view-transition fade, `prefers-reduced-motion`
   honored end to end, all posts readable without JavaScript.
 

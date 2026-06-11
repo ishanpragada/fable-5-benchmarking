@@ -87,13 +87,14 @@ function attachPill(list) {
       return;
     }
     if (gsap.getProperty(pill, "opacity") < 0.12) {
-      // invisible: take position silently, then fade in
+      // invisible: take position silently, then fade in.
+      // (re-target the quickTos below rather than killing their tweens —
+      // a killed quickTo silently ignores every later call)
       gsap.set(pill, { y, height: h });
     }
     yTo(y);
     hTo(h);
     gsap.to(pill, { opacity: 1, duration: 0.18, ease: "power1.out", overwrite: "auto" });
-
   }
 
   function leave() {
